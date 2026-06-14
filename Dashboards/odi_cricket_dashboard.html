@@ -1,0 +1,379 @@
+
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: var(--font-sans); }
+.dash { padding: 1rem 0; }
+.kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; margin-bottom: 1.5rem; }
+.kpi { background: var(--color-background-secondary); border-radius: var(--border-radius-md); padding: 14px 12px; text-align: center; }
+.kpi-val { font-size: 22px; font-weight: 500; color: var(--color-text-primary); }
+.kpi-lbl { font-size: 11px; color: var(--color-text-secondary); margin-top: 4px; }
+.tabs { display: flex; gap: 6px; margin-bottom: 1.25rem; flex-wrap: wrap; }
+.tab { padding: 6px 14px; font-size: 13px; border: 0.5px solid var(--color-border-secondary); border-radius: var(--border-radius-md); cursor: pointer; background: transparent; color: var(--color-text-secondary); }
+.tab.active { background: var(--color-background-secondary); color: var(--color-text-primary); border-color: var(--color-border-primary); font-weight: 500; }
+.panel { display: none; }
+.panel.active { display: block; }
+.chart-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin-bottom: 16px; }
+.chart-box { background: var(--color-background-primary); border: 0.5px solid var(--color-border-tertiary); border-radius: var(--border-radius-lg); padding: 16px; }
+.chart-title { font-size: 13px; font-weight: 500; color: var(--color-text-secondary); margin-bottom: 12px; }
+.bar-row { display: flex; align-items: center; gap: 8px; margin-bottom: 7px; }
+.bar-label { font-size: 12px; color: var(--color-text-secondary); width: 110px; flex-shrink: 0; text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bar-track { flex: 1; height: 18px; background: var(--color-background-secondary); border-radius: 3px; overflow: hidden; }
+.bar-fill { height: 100%; border-radius: 3px; display: flex; align-items: center; padding-left: 6px; }
+.bar-val { font-size: 11px; font-weight: 500; }
+.legend { display: flex; flex-wrap: wrap; gap: 12px; font-size: 12px; color: var(--color-text-secondary); margin-bottom: 8px; }
+.leg-dot { width: 10px; height: 10px; border-radius: 2px; display: inline-block; margin-right: 4px; vertical-align: middle; }
+.stat-table { width: 100%; font-size: 12px; border-collapse: collapse; }
+.stat-table th { text-align: left; color: var(--color-text-secondary); font-weight: 500; padding: 4px 6px; border-bottom: 0.5px solid var(--color-border-tertiary); }
+.stat-table td { padding: 5px 6px; border-bottom: 0.5px solid var(--color-border-tertiary); color: var(--color-text-primary); }
+.stat-table tr:last-child td { border-bottom: none; }
+.badge { font-size: 11px; padding: 2px 8px; border-radius: 20px; font-weight: 500; }
+.badge-green { background: #EAF3DE; color: #3B6D11; }
+.badge-red { background: #FCEBEB; color: #A32D2D; }
+.pie-wrap { position: relative; width: 140px; height: 140px; margin: 0 auto 8px; }
+.heatmap-grid { display: grid; grid-template-columns: 80px repeat(8, 1fr); font-size: 10px; gap: 2px; }
+.hm-cell { padding: 4px 2px; text-align: center; border-radius: 3px; font-weight: 500; font-size: 10px; }
+.hm-label { font-size: 10px; color: var(--color-text-secondary); display: flex; align-items: center; justify-content: flex-end; padding-right: 4px; }
+.hm-header { font-size: 9px; color: var(--color-text-secondary); text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+</style>
+
+<div class="dash">
+  <h2 style="font-size:18px; font-weight:500; color:var(--color-text-primary); margin-bottom:4px;">ODI cricket analytics</h2>
+  <p style="font-size:13px; color:var(--color-text-secondary); margin-bottom:1.25rem;">Men's ODI • 2002–2023 • Sample data preview</p>
+
+  <div class="kpi-grid">
+    <div class="kpi"><div class="kpi-val">4,867</div><div class="kpi-lbl">Total matches</div></div>
+    <div class="kpi"><div class="kpi-val">23</div><div class="kpi-lbl">Teams</div></div>
+    <div class="kpi"><div class="kpi-val">1.2M+</div><div class="kpi-lbl">Balls bowled</div></div>
+    <div class="kpi"><div class="kpi-val">63,400</div><div class="kpi-lbl">Wickets</div></div>
+    <div class="kpi"><div class="kpi-val">248</div><div class="kpi-lbl">Avg runs/match</div></div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" onclick="showTab('teams')"><i class="ti ti-trophy" aria-hidden="true"></i> Teams</button>
+    <button class="tab" onclick="showTab('batting')"><i class="ti ti-cricket" aria-hidden="true"></i> Batting</button>
+    <button class="tab" onclick="showTab('bowling')"><i class="ti ti-ball-bowling" aria-hidden="true"></i> Bowling</button>
+    <button class="tab" onclick="showTab('trends')"><i class="ti ti-trending-up" aria-hidden="true"></i> Trends</button>
+    <button class="tab" onclick="showTab('pakistan')">🇵🇰 Pakistan</button>
+  </div>
+
+  <!-- TEAMS -->
+  <div class="panel active" id="panel-teams">
+    <div class="chart-row">
+      <div class="chart-box">
+        <div class="chart-title">Win % by team (top 10)</div>
+        <div id="win-bars"></div>
+      </div>
+      <div class="chart-box">
+        <div class="chart-title">Toss impact on result</div>
+        <div style="position:relative;width:160px;height:160px;margin:0 auto 12px;">
+          <canvas id="tossChart" role="img" aria-label="Pie chart: toss winner won 52%, toss winner lost 48%">Toss winner won 52%, lost 48%.</canvas>
+        </div>
+        <div class="legend" style="justify-content:center;">
+          <span><span class="leg-dot" style="background:#378ADD;"></span>Toss winner won 52%</span>
+          <span><span class="leg-dot" style="background:#E24B4A;"></span>Toss winner lost 48%</span>
+        </div>
+      </div>
+    </div>
+    <div class="chart-row">
+      <div class="chart-box">
+        <div class="chart-title">Toss decision — bat vs field</div>
+        <div style="position:relative;height:180px;"><canvas id="tossDecChart" role="img" aria-label="Bar chart: field 62%, bat 38%">Field 62%, bat 38%.</canvas></div>
+      </div>
+      <div class="chart-box">
+        <div class="chart-title">Head-to-head wins heatmap (top 6 teams)</div>
+        <div id="heatmap"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- BATTING -->
+  <div class="panel" id="panel-batting">
+    <div class="chart-row">
+      <div class="chart-box">
+        <div class="chart-title">Top 10 run scorers (ODI 2002–2023)</div>
+        <div id="bat-bars"></div>
+      </div>
+      <div class="chart-box">
+        <div class="chart-title">Batting performance table</div>
+        <table class="stat-table">
+          <thead><tr><th>Player</th><th>Runs</th><th>SR</th><th>Avg</th></tr></thead>
+          <tbody id="bat-table"></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="chart-box" style="margin-bottom:16px;">
+      <div class="chart-title">Average runs per over — 1st vs 2nd innings</div>
+      <div style="position:relative;height:220px;"><canvas id="overChart" role="img" aria-label="Line chart of runs per over by innings">Average runs per over for overs 1 through 50.</canvas></div>
+    </div>
+  </div>
+
+  <!-- BOWLING -->
+  <div class="panel" id="panel-bowling">
+    <div class="chart-row">
+      <div class="chart-box">
+        <div class="chart-title">Top 10 wicket takers</div>
+        <div id="bowl-bars"></div>
+      </div>
+      <div class="chart-box">
+        <div class="chart-title">Dismissal types</div>
+        <div style="position:relative;height:220px;"><canvas id="dismissalChart" role="img" aria-label="Bar chart of dismissal types">Caught leads, followed by bowled, lbw, run out, stumped.</canvas></div>
+      </div>
+    </div>
+    <div class="chart-box" style="margin-bottom:16px;">
+      <div class="chart-title">Bowling performance table</div>
+      <table class="stat-table">
+        <thead><tr><th>Player</th><th>Wickets</th><th>Economy</th><th>Bowling avg</th></tr></thead>
+        <tbody id="bowl-table"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- TRENDS -->
+  <div class="panel" id="panel-trends">
+    <div class="chart-box" style="margin-bottom:16px;">
+      <div class="chart-title">Matches per year (2002–2023)</div>
+      <div style="position:relative;height:220px;"><canvas id="matchTrendChart" role="img" aria-label="Line chart of ODI matches per year 2002 to 2023">Shows yearly fluctuation with dip in 2020 due to COVID.</canvas></div>
+    </div>
+    <div class="chart-row">
+      <div class="chart-box">
+        <div class="chart-title">Top 5 team wins per year</div>
+        <div style="position:relative;height:220px;"><canvas id="teamWinsChart" role="img" aria-label="Multi-line chart of top 5 team wins per year">Australia, India, Pakistan, England, South Africa trends.</canvas></div>
+      </div>
+      <div class="chart-box">
+        <div class="chart-title">Top venues by matches hosted</div>
+        <div id="venue-bars"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PAKISTAN -->
+  <div class="panel" id="panel-pakistan">
+    <div class="kpi-grid" style="margin-bottom:1.25rem;">
+      <div class="kpi"><div class="kpi-val">580</div><div class="kpi-lbl">Matches played</div></div>
+      <div class="kpi"><div class="kpi-val">316</div><div class="kpi-lbl">Wins</div></div>
+      <div class="kpi"><div class="kpi-val">254</div><div class="kpi-lbl">Losses / NR</div></div>
+      <div class="kpi"><div class="kpi-val">54.5%</div><div class="kpi-lbl">Win rate</div></div>
+    </div>
+    <div class="chart-row">
+      <div class="chart-box">
+        <div class="chart-title">Pakistan wins vs losses per year</div>
+        <div style="position:relative;height:220px;"><canvas id="pakYearChart" role="img" aria-label="Grouped bar chart of Pakistan wins and losses per year">Pakistan wins and losses 2002 to 2023.</canvas></div>
+      </div>
+      <div class="chart-box">
+        <div class="chart-title">Win % vs each opponent</div>
+        <div id="pak-opp-bars"></div>
+      </div>
+    </div>
+    <div class="chart-row">
+      <div class="chart-box">
+        <div class="chart-title">Pakistan top run scorers</div>
+        <div id="pak-bat-bars"></div>
+      </div>
+      <div class="chart-box">
+        <div class="chart-title">Pakistan top wicket takers</div>
+        <div id="pak-bowl-bars"></div>
+      </div>
+    </div>
+    <div style="text-align:center; margin-top:12px;">
+      <button class="tab" onclick="sendPrompt('Show me Pakistan vs India head-to-head analysis')">Pakistan vs India deep dive ↗</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+function showTab(name) {
+  document.querySelectorAll('.tab').forEach((t,i) => t.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  event.target.closest('.tab').classList.add('active');
+  document.getElementById('panel-'+name).classList.add('active');
+  if(name==='trends') { drawTrends(); }
+}
+
+const BLUE='#378ADD', RED='#E24B4A', GREEN='#639922', AMBER='#BA7517', TEAL='#1D9E75', PURPLE='#7F77DD', CORAL='#D85A30', PINK='#D4537E';
+
+function makeBars(containerId, data, color, maxVal, suffix='') {
+  const el = document.getElementById(containerId);
+  el.innerHTML = '';
+  data.forEach(d => {
+    const pct = Math.round(d.val / maxVal * 100);
+    el.innerHTML += `<div class="bar-row">
+      <div class="bar-label" title="${d.label}">${d.label}</div>
+      <div class="bar-track">
+        <div class="bar-fill" style="width:${pct}%;background:${color};">
+          <span class="bar-val" style="color:#fff;">${d.val}${suffix}</span>
+        </div>
+      </div>
+    </div>`;
+  });
+}
+
+const winData = [
+  {label:'Australia', val:71},{label:'India', val:64},{label:'South Africa', val:62},
+  {label:'England', val:58},{label:'Pakistan', val:55},{label:'New Zealand', val:54},
+  {label:'Sri Lanka', val:48},{label:'West Indies', val:42},{label:'Bangladesh', val:38},{label:'Zimbabwe', val:31}
+];
+makeBars('win-bars', winData, BLUE, 80, '%');
+
+const batData = [
+  {label:'V Kohli', val:12040},{label:'SR Tendulkar', val:10897},{label:'RT Ponting', val:9789},
+  {label:'Babar Azam', val:9234},{label:'KS Williamson', val:8987},{label:'MS Dhoni', val:8643},
+  {label:'JH Kallis', val:8321},{label:'DPMD Jayawardene', val:8100},{label:'AB de Villiers', val:7891},{label:'Younis Khan', val:7530}
+];
+makeBars('bat-bars', batData, AMBER, 13000);
+
+const batTable = [
+  ['V Kohli','12,040','93.5','58.7'],['SR Tendulkar','10,897','86.2','44.8'],
+  ['RT Ponting','9,789','80.4','42.0'],['Babar Azam','9,234','88.3','56.8'],
+  ['KS Williamson','8,987','79.0','47.5']
+];
+const bt = document.getElementById('bat-table');
+batTable.forEach(r => {
+  bt.innerHTML += `<tr><td>${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td><td>${r[3]}</td></tr>`;
+});
+
+const bowlData = [
+  {label:'SL Malinga', val:335},{label:'Shahid Afridi', val:319},{label:'M Muralitharan', val:308},
+  {label:'Wasim Akram', val:281},{label:'Z Khan', val:272},{label:'A Nehra', val:261},
+  {label:'Waqar Younis', val:252},{label:'JM Anderson', val:243},{label:'M Morkel', val:231},{label:'SCJ Broad', val:218}
+];
+makeBars('bowl-bars', bowlData, RED, 360);
+
+const bowlTable = [
+  ['SL Malinga','335','4.83','22.1'],['Shahid Afridi','319','4.62','24.0'],
+  ['M Muralitharan','308','3.93','19.6'],['Wasim Akram','281','3.89','23.5'],
+  ['Z Khan','272','4.72','26.1']
+];
+const bwt = document.getElementById('bowl-table');
+bowlTable.forEach(r => {
+  bwt.innerHTML += `<tr><td>${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td><td>${r[3]}</td></tr>`;
+});
+
+const venueData = [
+  {label:'Eden Gardens', val:89},{label:'MCG', val:82},{label:'Lords', val:78},
+  {label:"Headingley", val:72},{label:'SCG', val:68},{label:'Gaddafi Stadium', val:65},
+  {label:'Wanderers', val:61},{label:'Premadasa', val:57}
+];
+makeBars('venue-bars', venueData, TEAL, 100);
+
+const pakOppData = [
+  {label:'Zimbabwe', val:82},{label:'Bangladesh', val:76},{label:'West Indies', val:68},
+  {label:'Sri Lanka', val:55},{label:'England', val:51},{label:'South Africa', val:44},
+  {label:'Australia', val:41},{label:'India', val:38},{label:'New Zealand', val:36}
+];
+pakOppData.forEach(d => {
+  const el = document.getElementById('pak-opp-bars');
+  const color = d.val >= 50 ? TEAL : RED;
+  el.innerHTML += `<div class="bar-row">
+    <div class="bar-label">${d.label}</div>
+    <div class="bar-track">
+      <div class="bar-fill" style="width:${d.val}%;background:${color};">
+        <span class="bar-val" style="color:#fff;">${d.val}%</span>
+      </div>
+    </div>
+  </div>`;
+});
+
+const pakBatData = [
+  {label:'Babar Azam', val:4210},{label:'Mohammad Yousuf', val:3812},{label:'Inzamam-ul-Haq', val:3540},
+  {label:'Saeed Anwar', val:3320},{label:'Shoaib Malik', val:3100},{label:'Younis Khan', val:2890}
+];
+makeBars('pak-bat-bars', pakBatData, BLUE, 4500);
+
+const pakBowlData = [
+  {label:'Shahid Afridi', val:247},{label:'Waqar Younis', val:208},{label:'Wasim Akram', val:197},
+  {label:'Saqlain Mushtaq', val:169},{label:'Umar Gul', val:142},{label:'Mohammad Amir', val:119}
+];
+makeBars('pak-bowl-bars', pakBowlData, CORAL, 280);
+
+new Chart(document.getElementById('tossChart'), {
+  type: 'doughnut',
+  data: { datasets: [{ data: [52, 48], backgroundColor: [BLUE, RED], borderWidth: 0 }] },
+  options: { responsive: true, maintainAspectRatio: true, plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => c.raw + '%' } } }, cutout: '65%' }
+});
+
+new Chart(document.getElementById('tossDecChart'), {
+  type: 'bar',
+  data: {
+    labels: ['Field first', 'Bat first'],
+    datasets: [{ data: [62, 38], backgroundColor: [TEAL, AMBER], borderWidth: 0 }]
+  },
+  options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } },
+    scales: { y: { ticks: { callback: v => v+'%' }, grid: { color: 'rgba(128,128,128,0.1)' } }, x: { grid: { display: false } } } }
+});
+
+new Chart(document.getElementById('dismissalChart'), {
+  type: 'bar',
+  data: {
+    labels: ['Caught', 'Bowled', 'LBW', 'Run out', 'Stumped', 'Hit wicket'],
+    datasets: [{ data: [39820, 14310, 8940, 5210, 2890, 380], backgroundColor: [BLUE, AMBER, RED, PURPLE, TEAL, CORAL], borderWidth: 0 }]
+  },
+  options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } },
+    scales: { y: { ticks: { callback: v => (v/1000).toFixed(0)+'k' }, grid: { color: 'rgba(128,128,128,0.1)' } }, x: { grid: { display: false }, ticks: { font: { size: 11 } } } } }
+});
+
+new Chart(document.getElementById('overChart'), {
+  type: 'line',
+  data: {
+    labels: Array.from({length:50},(_,i)=>i+1),
+    datasets: [
+      { label:'1st innings', data: [4.2,4.8,5.1,4.9,5.3,5.0,4.8,4.6,4.9,5.1,5.3,5.5,5.2,5.4,5.6,5.3,5.5,5.7,5.4,5.6,5.3,5.5,5.2,5.4,5.1,5.3,5.5,5.7,5.9,6.1,5.8,6.0,6.2,6.4,6.6,6.8,7.0,7.2,7.4,7.6,7.8,8.0,8.2,8.4,8.6,8.8,9.0,9.2,9.4,9.6], borderColor: BLUE, backgroundColor: 'rgba(55,138,221,0.08)', borderWidth: 2, pointRadius: 0, fill: true, tension: 0.4 },
+      { label:'2nd innings', data: [5.1,5.3,5.5,5.2,5.4,5.6,5.3,5.1,5.4,5.6,5.8,6.0,5.7,5.9,6.1,5.8,6.0,6.2,5.9,6.1,5.8,6.0,5.7,5.9,5.6,5.8,6.0,6.2,6.4,6.6,6.3,6.5,6.7,6.9,7.1,7.3,7.5,7.7,7.9,8.1,8.3,8.5,8.7,8.9,9.1,9.3,9.5,9.7,9.9,10.1], borderColor: RED, backgroundColor: 'rgba(226,75,74,0.06)', borderWidth: 2, pointRadius: 0, fill: true, tension: 0.4 }
+    ]
+  },
+  options: { responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: { y: { grid: { color: 'rgba(128,128,128,0.1)' }, title: { display: true, text: 'avg runs', font: { size: 11 } } }, x: { grid: { display: false }, title: { display: true, text: 'over', font: { size: 11 } } } } }
+});
+
+let trendsDrawn = false;
+function drawTrends() {
+  if (trendsDrawn) return;
+  trendsDrawn = true;
+
+  const years = [2002,2003,2004,2005,2006,2007,2008,2009,2010,2011,2012,2013,2014,2015,2016,2017,2018,2019,2020,2021,2022,2023];
+  const matchCounts = [188,210,224,219,231,248,240,235,228,242,235,228,241,238,219,224,231,238,89,198,221,204];
+
+  new Chart(document.getElementById('matchTrendChart'), {
+    type: 'line',
+    data: {
+      labels: years,
+      datasets: [{ label:'Matches', data: matchCounts, borderColor: BLUE, backgroundColor: 'rgba(55,138,221,0.08)', borderWidth: 2.5, pointRadius: 3, pointHoverRadius: 5, fill: true, tension: 0.4 }]
+    },
+    options: { responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: { y: { grid: { color: 'rgba(128,128,128,0.1)' } }, x: { grid: { display: false }, ticks: { maxRotation: 45, font: { size: 10 } } } } }
+  });
+
+  new Chart(document.getElementById('teamWinsChart'), {
+    type: 'line',
+    data: {
+      labels: years,
+      datasets: [
+        { label:'Australia', data: [18,22,20,19,21,24,20,18,17,19,16,15,17,18,14,16,18,19,8,14,16,13], borderColor: AMBER, borderWidth: 2, pointRadius: 2, tension: 0.4 },
+        { label:'India', data: [12,15,18,20,19,22,20,21,19,22,20,21,22,20,18,22,24,21,9,17,20,19], borderColor: BLUE, borderWidth: 2, pointRadius: 2, tension: 0.4 },
+        { label:'Pakistan', data: [14,16,15,14,16,18,17,15,14,16,15,14,16,15,12,14,16,15,6,12,14,13], borderColor: GREEN, borderWidth: 2, pointRadius: 2, tension: 0.4 },
+        { label:'England', data: [10,11,13,12,14,15,14,13,12,14,13,12,14,13,11,16,18,17,7,13,15,14], borderColor: RED, borderWidth: 2, pointRadius: 2, tension: 0.4 },
+        { label:'S Africa', data: [13,14,15,14,16,17,16,14,13,15,14,13,15,14,11,13,15,14,5,11,13,11], borderColor: TEAL, borderWidth: 2, pointRadius: 2, tension: 0.4 }
+      ]
+    },
+    options: { responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: true, labels: { font: { size: 11 }, boxWidth: 12, padding: 12 } } },
+      scales: { y: { grid: { color: 'rgba(128,128,128,0.1)' } }, x: { grid: { display: false }, ticks: { maxRotation: 45, font: { size: 10 } } } } }
+  });
+
+  new Chart(document.getElementById('pakYearChart'), {
+    type: 'bar',
+    data: {
+      labels: years,
+      datasets: [
+        { label:'Wins', data: [14,16,15,14,16,18,17,15,14,16,15,14,16,15,12,14,16,15,6,12,14,13], backgroundColor: TEAL, borderWidth: 0 },
+        { label:'Losses/NR', data: [10,8,10,11,9,8,10,12,11,9,10,11,9,10,13,11,9,10,4,8,10,9], backgroundColor: RED, borderWidth: 0 }
+      ]
+    },
+    options: { responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: true, labels: { font: { size: 11 }, boxWidth: 12 } } },
+      scales: { x: { stacked: false, grid: { display: false }, ticks: { maxRotation: 45, font: { size: 9 } } }, y: { grid: { color: 'rgba(128,128,128,0.1)' } } } }
+  });
+}
+</script>
